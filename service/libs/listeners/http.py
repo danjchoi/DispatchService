@@ -52,7 +52,7 @@ class Listener:
 
     def run(self, port):
         """Run the Flask app."""
-        self.logger.debug(helpers.info(self.name))
+        self.logger.debug(helpers.info(self.listener_name))
         self.app.run(port=port)
 
     # App Routes
