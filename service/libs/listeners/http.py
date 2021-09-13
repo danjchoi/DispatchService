@@ -1,6 +1,7 @@
 """The http listener."""
 
 import logging
+import os
 import time
 from multiprocessing import Process
 
@@ -8,13 +9,15 @@ import flask
 from dateutil import parser
 from flask import Flask
 from libs import helpers
+from libs.senders import gmail
 
 
 class Listener:
     """Represents an http listener object."""
 
+    # TODO - These should be pulled from a database of some sort
     KNOWN_EVENT_TYPES = ["market_dispatch"]
-    KNOWN_PROGRAMS = {"1": "Voltus Interviews"}
+    KNOWN_PROGRAMS = {"1": "Voltus Interviews", "2": "Super Special Program"}
 
     def __init__(self, name=None, log_dir=None, log_level=logging.DEBUG):
         """Initialize the http listener object."""
@@ -143,23 +146,42 @@ class Listener:
         # - Create message
         msg = self._create_msg(self.KNOWN_PROGRAMS[program_id], start_time, end_time)
 
-        # - Start sender processes
-        # gmail_sender_1 = gmail.Sender(
-        #     email, password, recipient, name="gmail1", log_dir=log_dir
-        # )
-        # sender_1 = Process(target=gmail_sender_1.run)
-        # sender_1.start()
+        # - Get list of recipients based on program_id
+        recipients = self._get_recipients(program_id)
 
-        return flask.make_response(msg, 200)
+        # TODO have some decision based on event_type
+        subject = f"{event_type} notification"
+
+        # - Start sender processes
+        email_creds = self._get_email_creds()
+        for recipient in recipients:
+            sender = None
+            if recipient["notification_type"] == "email":
+                gmail_sender = gmail.Sender(
+                    email_creds["email"],
+                    email_creds["password"],
+                    recipient["email"],
+                    subject=subject,
+                    body=msg,
+                    name=self.name,
+                    log_dir=self.log_dir,
+                )
+                sender = Process(target=gmail_sender.run)
+            # TODO - insert other notification types like sms, webhook, etc
+            if sender is not None:
+                self.logger.debug(f"Starting sender for {recipient}")
+                sender.start()
+        self.logger.debug("Sending 204 response to requester")
+        return "", 204
 
     def _create_msg(self, program_name, start_time, end_time):
         """Create message body."""
         # - Date format like "Monday Sep 25"
-        date_format = "%A %b %d"
+        DATE_FORMAT = "%A %b %d"
         # - Time format like "1:01 PM"
-        time_format = "%I:%M %p"
-        formatted_start_date = start_time.strftime(date_format)
-        formatted_start_time = start_time.strftime(time_format)
+        TIME_FORMAT = "%I:%M %p"
+        formatted_start_date = start_time.strftime(DATE_FORMAT)
+        formatted_start_time = start_time.strftime(TIME_FORMAT)
         # - Create message
         msg = (
             "Hello Voltan,\n\n"
@@ -168,8 +190,57 @@ class Listener:
             f"{formatted_start_date} at {formatted_start_time}"
         )
         if end_time is not None:
-            formatted_end_date = end_time.strftime(date_format)
-            formatted_end_time = end_time.strftime(time_format)
+            formatted_end_date = end_time.strftime(DATE_FORMAT)
+            formatted_end_time = end_time.strftime(TIME_FORMAT)
             msg += f" ending on {formatted_end_date} at {formatted_end_time}"
         msg += ".\n\nSincerely,\nVoltus"
         return msg
+
+    def _get_email_creds(self):
+        """Get email creds for the email sender."""
+        # TODO - Insert a secure storage access or secure config reading here
+        return {
+            "email": os.getenv("SERVICE_EMAIL"),
+            "password": os.getenv("SERVICE_PASSWORD"),
+        }
+
+    def _get_recipients(self, program_id):
+        """Get all recipients subscribed to the program_id."""
+        # TODO - Insert DB connection here
+        recipients = [
+            {
+                "email": "testautomation4jltz7te+recipient1@gmail.com",
+                "program_ids": ["1"],
+                "notification_type": "email",
+            },
+            {
+                "email": "testautomation4jltz7te+recipient2@gmail.com",
+                "program_ids": ["2"],
+                "notification_type": "email",
+            },
+            {
+                "email": "testautomation4jltz7te+recipient3@gmail.com",
+                "program_ids": ["1"],
+                "notification_type": "email",
+            },
+            {
+                "email": "testautomation4jltz7te+recipient4@gmail.com",
+                "program_ids": ["2"],
+                "notification_type": "email",
+            },
+            {
+                "email": "testautomation4jltz7te+recipient5@gmail.com",
+                "program_ids": ["1"],
+                "notification_type": "sms",
+            },
+            {
+                "email": "testautomation4jltz7te+recipient6@gmail.com",
+                "program_ids": ["2"],
+                "notification_type": "sms",
+            },
+        ]
+        return [
+            recipient
+            for recipient in recipients
+            if program_id in recipient["program_ids"]
+        ]

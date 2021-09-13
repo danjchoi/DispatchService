@@ -4,13 +4,11 @@ import os
 from multiprocessing import Process
 from pathlib import Path
 
-from libs import helpers
 from libs.listeners import http
 
 
 def main():
     """Start all relevant listeners."""
-    print(helpers.info("main"))
     # - Get logs directory
     log_dir = Path(os.getenv("LOGDIR"))
     if not log_dir.exists():

@@ -20,6 +20,8 @@ class Sender:
         email,
         password,
         recipient,
+        subject,
+        body,
         name=None,
         log_dir=None,
         log_level=logging.DEBUG,
@@ -28,6 +30,8 @@ class Sender:
         self.email = email
         self.password = password
         self.recipient = recipient
+        self.subject = subject
+        self.body = body
         self.name = name or helpers.rand_alphanumeric()
         self.sender_name = f"{self.name}_sender"
         self.log_dir = log_dir
@@ -72,17 +76,12 @@ class Sender:
         headers = {
             "From": self.email,
             "To": self.recipient,
-            "Subject": "Hi there",
+            "Subject": self.subject,
         }
-        body = (
-            f"Hello {self.recipient},\n\n"
-            f"Message from {self.email}\n\n"
-            f"Sincerely,\n{self.email}"
-        )
         message = email.message.Message()
         for key, val in headers.items():
             message.add_header(key, val)
-        message.set_payload(body)
+        message.set_payload(self.body)
         return message
 
     def _send_message(self, message):
