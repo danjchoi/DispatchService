@@ -17,7 +17,10 @@ def main():
         raise RuntimeError(f"Given path '{log_dir}' already exists and is not a dir.")
     # - Start listeners
     http_listen_1 = http.Listener(name="http1", log_dir=log_dir)
-    listener_1 = Process(target=http_listen_1.run, kwargs={"port": 5000})
+    listener_1 = Process(
+        target=http_listen_1.run,
+        kwargs={"host": os.getenv("LISTENER_HOST"), "port": os.getenv("LISTENER_PORT")},
+    )
     listener_1.start()
 
 

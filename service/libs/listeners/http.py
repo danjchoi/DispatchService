@@ -6,6 +6,7 @@ import time
 from multiprocessing import Process
 
 import flask
+import waitress
 from dateutil import parser
 from flask import Flask
 from libs import helpers
@@ -61,10 +62,10 @@ class Listener:
         self._logger.addHandler(handler)
         return self._logger
 
-    def run(self, port):
+    def run(self, host, port):
         """Run the Flask app."""
         self.logger.debug(helpers.info(self.listener_name))
-        self.app.run(port=port)
+        waitress.serve(self.app, host=host, port=port)
 
     # App Routes
     def index(self):
