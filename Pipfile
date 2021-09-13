@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 bpython = "*"
 flask = "*"
+python-dateutil = "*"
+waitress = "*"
 
 [dev-packages]
 black = "==21.8b0"
